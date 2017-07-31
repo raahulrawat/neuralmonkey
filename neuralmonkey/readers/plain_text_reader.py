@@ -38,7 +38,7 @@ def tokenized_text_reader(encoding: str = "utf-8") -> PlainTextFileReader:
 
 
 def column_separated_reader(
-        column: int, delimiter: str = "\t", quotechar: str = None,
+        column: int, delimiter: str = "\t", quotechar: str = csv.QUOTE_NONE,
         encoding: str = "utf-8") -> PlainTextFileReader:
     """Get reader for delimiter-separated tokenized text.
 
@@ -80,7 +80,7 @@ def csv_reader(column: int):
 
 def tsv_reader(column: int):
     return column_separated_reader(column=column, delimiter='\t',
-                                   quotechar=None)
+                                   quotechar=csv.QUOTE_NONE)
 
 
 # pylint: disable=invalid-name
