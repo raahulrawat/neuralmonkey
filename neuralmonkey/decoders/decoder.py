@@ -1,7 +1,7 @@
 # pylint: disable=too-many-lines
 import math
 from typing import (cast, Iterable, List, Callable, Optional,
-                    Any, Tuple, NamedTuple)
+                    Any, Tuple, NamedTuple, Union)
 
 import numpy as np
 import tensorflow as tf
@@ -13,6 +13,8 @@ from neuralmonkey.vocabulary import (Vocabulary, START_TOKEN, END_TOKEN_INDEX,
                                      PAD_TOKEN_INDEX)
 from neuralmonkey.model.model_part import ModelPart, FeedDict
 from neuralmonkey.model.sequence import EmbeddedSequence
+from neuralmonkey.model.stateful import (TemporalStatefulWithOutput,
+                                         SpatialStatefulWithOutput)
 from neuralmonkey.logging import log, warn
 from neuralmonkey.nn.ortho_gru_cell import OrthoGRUCell
 from neuralmonkey.nn.utils import dropout
@@ -58,7 +60,9 @@ class Decoder(ModelPart):
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-arguments,too-many-branches,too-many-statements
     def __init__(self,
-                 encoders: List[Any],
+                 # TODO only stateful, attention will need temporal or spat.
+                 encoders: List[Union[TemporalStatefulWithOutput,
+                                      SpatialStatefulWithOutput]],
                  vocabulary: Vocabulary,
                  data_id: str,
                  name: str,
@@ -148,7 +152,7 @@ class Decoder(ModelPart):
                 log("No rnn_size or encoder_projection: Using concatenation of"
                     " encoded states")
                 self.encoder_projection = concat_encoder_projection
-                self.rnn_size = sum(e.encoded.get_shape()[1].value
+                self.rnn_size = sum(e.output.get_shape()[1].value
                                     for e in encoders)
             else:
                 log("Using linear projection of encoders as the initial state")
@@ -175,7 +179,7 @@ class Decoder(ModelPart):
 
             # fetch train attention objects
             self._train_attention_objects = {}
-            # type: Dict[Attentive, tf.Tensor]
+            # type: Dict[Attentive, BaseAttention]
             if self.use_attention:
                 with tf.name_scope("attention_object"):
                     self._train_attention_objects = {
@@ -188,7 +192,7 @@ class Decoder(ModelPart):
 
             # fetch runtime attention objects
             self._runtime_attention_objects = {}
-            # type: Dict[Attentive, tf.Tensor]
+            # type: Dict[Attentive, BaseAttention]
             if self.use_attention:
                 self._runtime_attention_objects = {
                     e: e.create_attention_object()
@@ -371,7 +375,8 @@ class Decoder(ModelPart):
     def _get_conditional_gru_cell(self) -> tf.contrib.rnn.GRUCell:
         return tf.contrib.rnn.GRUCell(self.rnn_size)
 
-    def get_attention_object(self, encoder, train_mode: bool):
+    def get_attention_object(self, encoder: Attentive,
+                             train_mode: bool) -> BaseAttention:
         if train_mode:
             return self._train_attention_objects.get(encoder)
 
