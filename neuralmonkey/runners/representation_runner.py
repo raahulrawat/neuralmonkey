@@ -15,15 +15,17 @@ class RepresentationExecutable(Executable):
 
     def __init__(self, prev_coders: List[ModelPart],
                  encoded: tf.Tensor,
+                 num_sessions,
                  used_session: int) -> None:
         self._prev_coders = prev_coders
         self._encoded = encoded
+        self._num_sessions = num_sessions
         self._used_session = used_session
 
         self.result = None  # type: Optional[ExecutionResult]
 
     def next_to_execute(self) -> NextExecute:
-        return self._prev_coders, {"encoded": self._encoded}, {}
+        return self._prev_coders, {"encoded": self._encoded}, [{} for _ in range(self._num_sessions)]
 
     def collect_results(self, results: List[Dict]) -> None:
         if self._used_session > len(results):
@@ -66,9 +68,11 @@ class RepresentationRunner(BaseRunner):
         self._encoded = encoder.encoded  # type: ignore
 
     def get_executable(self, compute_losses=False,
-                       summaries=True) -> RepresentationExecutable:
+                       summaries=True,
+                       num_sessions=1) -> RepresentationExecutable:
         return RepresentationExecutable(self.all_coders,
                                         self._encoded,
+                                        num_sessions,
                                         self._used_session)
 
     @property

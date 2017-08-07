@@ -26,7 +26,8 @@ class RegressionRunner(BaseRunner):
 
     def get_executable(self,
                        compute_losses: bool = False,
-                       summaries=True) -> Executable:
+                       summaries=True,
+                       num_sessions=1) -> Executable:
 
         if compute_losses:
             fetches = {"mse": self._decoder.cost}
@@ -36,6 +37,7 @@ class RegressionRunner(BaseRunner):
         fetches["prediction"] = self._decoder.predictions
 
         return RegressionRunExecutable(self.all_coders, fetches,
+                                       num_sessions,
                                        self._postprocess)
 
     @property
@@ -48,16 +50,18 @@ class RegressionRunExecutable(Executable):
     def __init__(self,
                  all_coders: List[ModelPart],
                  fetches: Dict[str, tf.Tensor],
+                 num_sessions: int,
                  postprocess: Callable[[float], float] = None) -> None:
 
         self.all_coders = all_coders
         self._fetches = fetches
+        self._num_sessions = num_sessions
         self._postprocess = postprocess
         self.result = None  # type: Optional[ExecutionResult]
 
     def next_to_execute(self) -> NextExecute:
         """Get the feedables and tensors to run."""
-        return self.all_coders, self._fetches, {}
+        return self.all_coders, self._fetches, [{} for _ in range(self._num_sessions)]
 
     def collect_results(self, results: List[Dict]) -> None:
         predictions_sum = np.zeros_like(results[0]["prediction"])

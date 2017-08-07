@@ -44,7 +44,7 @@ class BaseRunner(object):
         self.all_coders = collect_encoders(decoder)
 
     def get_executable(self, compute_losses=False,
-                       summaries=True) -> Executable:
+                       summaries=True, num_sessions=1) -> Executable:
         raise NotImplementedError()
 
     @property

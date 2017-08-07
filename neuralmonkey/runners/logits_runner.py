@@ -21,11 +21,13 @@ class LogitsExecutable(Executable):
     def __init__(self,
                  all_coders: List[ModelPart],
                  fetches: FeedDict,
+                 num_sessions: int,
                  vocabulary: Vocabulary,
                  normalize: bool = True,
                  pick_index: int = None) -> None:
         self.all_coders = all_coders
         self._fetches = fetches
+        self._num_sessions = num_sessions
         self._vocabulary = vocabulary
         self._normalize = normalize
         self._pick_index = pick_index
@@ -35,7 +37,7 @@ class LogitsExecutable(Executable):
 
     def next_to_execute(self) -> NextExecute:
         """Get the feedables and tensors to run."""
-        return self.all_coders, self._fetches, {}
+        return self.all_coders, self._fetches, [{} for _ in range(self._num_sessions)]
 
     def collect_results(self, results: List[Dict]) -> None:
         if len(results) != 1:
@@ -121,7 +123,8 @@ class LogitsRunner(BaseRunner):
 
     def get_executable(self,
                        compute_losses: bool = False,
-                       summaries: bool = True) -> LogitsExecutable:
+                       summaries: bool = True,
+                       num_sessions: int = 1) -> LogitsExecutable:
         if compute_losses:
             fetches = {"train_loss": self._decoder.train_loss,
                        "runtime_loss": self._decoder.runtime_loss}
@@ -132,6 +135,7 @@ class LogitsRunner(BaseRunner):
         fetches["logits"] = self._decoder.decoded_logits
 
         return LogitsExecutable(self.all_coders, fetches,
+                                num_sessions,
                                 self._decoder.vocabulary,
                                 self._normalize,
                                 self._pick_index)
