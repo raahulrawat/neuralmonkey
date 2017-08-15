@@ -546,11 +546,11 @@ class Decoder(ModelPart):
                        for e in self.encoders]
         att_objects = [a for a in att_objects if a is not None]
 
-        self.initial_loop_state = self.get_initial_loop_state(att_objects)
+        initial_loop_state = self.get_initial_loop_state(att_objects)
         final_loop_state = tf.while_loop(
             self.loop_continue_criterion,
             self.get_body(att_objects, train_mode, sample),
-            self.initial_loop_state)
+            initial_loop_state)
 
         for att_state, attn_obj in zip(
                 final_loop_state.attention_loop_states, att_objects):
