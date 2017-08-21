@@ -15,6 +15,7 @@ BeamSearchOutput = NamedTuple("BeamSearchOutput",
                                ("parent_ids", List[List[int]]),
                                ("token_ids", List[List[int]])])
 
+
 class BeamSearchExecutable(Executable):
     def __init__(self,
                  rank: int,
@@ -42,7 +43,7 @@ class BeamSearchExecutable(Executable):
         # If we are ensembling, we run only one step at a time
         if self._num_sessions > 1:
             for fd in self._next_feed:
-                fd.update({self._decoder._max_steps: 1})
+                fd.update({self._decoder.max_steps: 1})
 
         self.result = None  # type: Optional[ExecutionResult]
 
@@ -84,7 +85,6 @@ class BeamSearchExecutable(Executable):
             self.prepare_results(self._output)
             return
 
-
         # Prepare the next feed_dict (in ensembles)
         self._next_feed = []
         for sess_idx, _ in enumerate(results):
@@ -94,21 +94,21 @@ class BeamSearchExecutable(Executable):
             fd = {}
             # Due to the arrays in DecoderState (prev_contexts),
             # we have to create feed for each value separately.
-            for field in self._decoder._decoder_state._fields:
+            for field in self._decoder.decoder_state._fields:
                 # We do not feed the step
                 if field == 'step':
                     continue
-                tensor = getattr(self._decoder._decoder_state, field)
+                tensor = getattr(self._decoder.decoder_state, field)
                 value = getattr(dec_ls, field)
                 if isinstance(tensor, list):
                     for t, val in zip(tensor, value):
-                        fd.update({t : val})
+                        fd.update({t: val})
                 else:
-                    fd.update({tensor : value})
+                    fd.update({tensor: value})
 
             fd.update({
-                self._decoder._max_steps : 1,
-                self._decoder._search_state : search_state})
+                self._decoder.max_steps: 1,
+                self._decoder.search_state: search_state})
             self._next_feed.append(fd)
         return
 
@@ -179,6 +179,7 @@ class BeamSearchRunner(BaseRunner):
     @property
     def decoder_data_id(self) -> Optional[str]:
         return None
+
 
 def beam_search_runner_range(output_series: str,
                              decoder: BeamSearchDecoder,

@@ -81,6 +81,7 @@ class BeamSearchDecoder(ModelPart):
     https://arxiv.org/pdf/1609.08144.pdf. Length normalization is parameter
     alpha from equation 14.
     """
+
     def __init__(self,
                  name: str,
                  parent_decoder: Decoder,
@@ -118,6 +119,18 @@ class BeamSearchDecoder(ModelPart):
     @property
     def vocabulary(self):
         return self.parent_decoder.vocabulary
+
+    @tensor
+    def search_state(self):
+        return self._search_state
+
+    @tensor
+    def decoder_state(self):
+        return self._decoder_state
+
+    @tensor
+    def max_steps(self):
+        return self._max_steps  
 
     def get_initial_loop_state(self, att_objects: List) -> BeamSearchLoopState:
         # We want to feed these values in ensembles
@@ -247,7 +260,7 @@ class BeamSearchDecoder(ModelPart):
 
             # mask the probabilities
             # shape(logprobs) = beam x vocabulary
-            logprobs = tf.nn.log_softmax(current_logits) # init: step=0
+            logprobs = tf.nn.log_softmax(current_logits)    # init: step=0
 
             finished_mask = tf.expand_dims(tf.to_float(bs_state.finished), 1)
             unfinished_logprobs = (1. - finished_mask) * logprobs
@@ -297,7 +310,6 @@ class BeamSearchDecoder(ModelPart):
 
             next_beam_ids = tf.div(topk_indices,
                                    len(self.vocabulary))
-
 
             rnn_state = dec_loop_state.prev_rnn_state
             rnn_output = dec_loop_state.prev_rnn_output
